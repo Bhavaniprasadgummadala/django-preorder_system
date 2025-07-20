@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0"><i class="bi bi-shop"></i> Available Stalls</h2>
+                </div>
+                
+                <div class="card-body">
+                    {% if stalls %}
+                    <div class="row">
+                        {% for stall in stalls %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h4 class="mb-0">{{ stall.name }}</h4>
+                                    <small class="text-muted">{{ stall.description }}</small>
+                                </div>
+                                
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-menu-up"></i> Menu</h5>
+                                    
+                                    <div class="list-group list-group-flush">
+                                        {% for item in stall.items.all %}
+                                        {% if item.available %}
+                                        <div class="list-group-item border-0 py-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-1 fw-bold">{{ item.name }}</h6>
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-clock"></i> {{ item.preparation_time }} min prep
+                                                    </small>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="price">₹{{ item.price|intcomma }}</span>
+                                                    {% if user.is_authenticated and user.user_type == 'R' %}
+                                                    <a href="{% url 'order_create' item.id %}" 
+                                                       class="btn btn-sm order-btn ms-2">
+                                                        <i class="bi bi-cart-plus"></i> Order
+                                                    </a>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        {% empty %}
+                                        <div class="alert alert-info mb-0">
+                                            No items available in this stall
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <h4 class="alert-heading">No Stalls Available</h4>
+                        <p>There are currently no food stalls available.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order History Sidebar -->
+        <div class="col-lg-4">
+            {% if user.is_authenticated %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0"><i class="bi bi-clock-history"></i> Your Recent Orders</h3>
+                </div>
+                
+                <div class="card-body">
+                    {% if orders %}
+                    <div class="list-group">
+                        {% for order in orders %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">{{ order.item.name }}</h6>
+                                    <small class="text-muted">
+                                        Ordered {{ order.created_at|timesince }} ago
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fw-bold">₹{{ order.item.price|intcomma }}</span>
+                                    <br>
+                                    <span class="badge bg-{% if order.status == 'COMPLETED' %}success{% else %}warning{% endif %}">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <a href="{% url 'order_history' %}" class="btn btn-outline-primary mt-3 w-100">
+                        View Full History
+                    </a>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <p class="mb-0">You haven't placed any orders yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            
+        </div>
+    </div>
+</div>
+{% endblock %}

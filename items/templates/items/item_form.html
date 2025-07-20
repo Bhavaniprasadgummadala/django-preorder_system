@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Add Item to Stall</h1>
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="id_name">Item Name:</label>
+        {{ form.name }}
+    </div>
+    <div class="form-group">
+        <label for="id_preparation_time">Preparation Time (minutes):</label>
+        {{ form.preparation_time }}
+    </div>
+    <div class="form-group">
+        <label for="id_price">Price:</label>
+        {{ form.price }}
+    </div>
+    <div class="form-group">
+        <label for="id_available">Available:</label>
+        {{ form.available }}
+    </div>
+    <button type="submit" class="btn btn-primary">Add Item</button>
+    <a href="{% url 'stall_dashboard' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

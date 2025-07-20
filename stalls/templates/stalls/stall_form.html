@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Create New Stall</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Create Stall</button>
+    <a href="{% url 'stall_dashboard' %}">Cancel</a>
+</form>
+{% endblock %}
