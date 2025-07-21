@@ -1,11 +1,14 @@
+from django.utils.timezone import timezone  # Change this import
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.views.generic import CreateView, ListView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
+from django.utils.timesince import timesince  # Add this import
 from stalls.models import Stall
 from .models import Order
 from items.models import Item
+from django.http import JsonResponse
 
 class OrderCreateView(LoginRequiredMixin, CreateView):
     model = Order
@@ -39,8 +42,9 @@ class OrderSuccessView(LoginRequiredMixin, TemplateView):
         except Order.DoesNotExist:
             messages.error(self.request, "Order not found")
         return context
+
 class HomeView(TemplateView):
-    template_name = 'home.html'  # or your template name
+    template_name = 'home.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -52,7 +56,7 @@ class HomeView(TemplateView):
             'items'
         ).order_by('name')
         
-        # Get user's orders if authenticated
+        # Get user's orders if authenticated - ADD CACHE CONTROL
         if self.request.user.is_authenticated:
             context['orders'] = Order.objects.filter(
                 user=self.request.user
@@ -60,6 +64,8 @@ class HomeView(TemplateView):
                 'item', 
                 'item__stall'
             ).order_by('-created_at')[:5]
+            # Force fresh query
+            context['orders']._result_cache = None
         
         return context
 
@@ -109,3 +115,21 @@ class UserOrdersView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['active_tab'] = 'orders'  # For highlighting nav menu
         return context
+    
+def get_recent_orders(request):
+    if request.user.is_authenticated:
+        orders = Order.objects.filter(user=request.user).order_by('-created_at')[:5]
+        orders_data = []
+        for order in orders:
+            orders_data.append({
+                'item_name': order.item.name,
+                'stall_name': order.item.stall.name,
+                'price': str(order.item.price),
+                'time_ago': timesince(order.created_at),  # Use timesince here
+                'status': order.status,
+                'status_display': order.get_status_display(),
+                'status_class': 'success' if order.status == 'COMPLETED' else 'warning',
+                'quantity': order.quantity
+            })
+        return JsonResponse({'orders': orders_data})
+    return JsonResponse({'orders': []})

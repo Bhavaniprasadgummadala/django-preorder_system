@@ -2,10 +2,57 @@
 
 {% block content %}
 <h2>Register</h2>
-<form method="post">
+<form method="post" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Register</button>
+    
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            Please correct the errors below.
+        </div>
+    {% endif %}
+    
+    <div class="mb-3">
+        <label class="form-label">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+            <div class="text-danger">{{ form.username.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+            <div class="text-danger">{{ form.email.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Password</label>
+        {{ form.password1 }}
+        <small class="form-text text-muted">
+            At least 8 characters, not entirely numeric.
+        </small>
+        {% if form.password1.errors %}
+            <div class="text-danger">{{ form.password1.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Confirm Password</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}
+            <div class="text-danger">{{ form.password2.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">User Type</label>
+        <div class="form-check">
+            {{ form.user_type }}
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Register</button>
 </form>
-<p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
 {% endblock %}

@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+    <meta http-equiv="Expires" content="0">
     <title>{% block title %}Food Preorder System{% endblock %}</title>
     
     <!-- Bootstrap 5 CSS -->
@@ -81,6 +85,19 @@
             to { transform: translateX(0); }
         }
         
+        /* Debug banner - remove in production */
+        .debug-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .alert {
@@ -107,10 +124,10 @@
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    {% if user.is_authenticated and user.is_staff %}
+                    {% if user.is_authenticated and user.user_type == 'S' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'stall_orders' %}">
-                            <i class="bi bi-clipboard-data"></i> My Stall Orders
+                        <a class="nav-link" href="{% url 'stall_dashboard' %}">
+                            <i class="bi bi-clipboard-data"></i> My Stall Dashboard
                         </a>
                     </li>
                     {% endif %}
@@ -121,6 +138,9 @@
                     <div class="dropdown">
                         <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i> {{ user.username }}
+                            <span class="badge bg-{% if user.user_type == 'S' %}success{% else %}info{% endif %} ms-1">
+                                {% if user.user_type == 'S' %}Stall Owner{% else %}Customer{% endif %}
+                            </span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{% url 'order_history' %}">
@@ -171,6 +191,18 @@
     </div>
     {% endif %}
 
+    <!-- Debug Banner - Remove in production -->
+<div class="debug-info" style="position: fixed; bottom: 0; left: 0; background: #333; color: white; padding: 5px; z-index: 1000;">
+    {% if user.is_authenticated %}
+    LIVE: Logged in as {{ user.username }} | 
+    Session: {{ request.session.session_key|slice:":8" }}... |
+    <a href="{% url 'logout' %}" style="color: #4caf50;">Logout</a>
+    {% else %}
+    LIVE: Not logged in |
+    <a href="{% url 'login' %}" style="color: #4caf50;">Login</a>
+    {% endif %}
+</div>
+
     <!-- Main Content -->
     <main class="container my-5 pt-4">
         {% block content %}{% endblock %}
@@ -197,6 +229,14 @@
                     const bsAlert = new bootstrap.Alert(alert);
                     bsAlert.close();
                 }, delay);
+            });
+            
+            // Force session check on page load
+            fetch('/accounts/check_session/', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
         });
     </script>

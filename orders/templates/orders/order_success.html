@@ -1,13 +1,23 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container">
     <div class="alert alert-success">
         <h4 class="alert-heading">Order Placed Successfully!</h4>
         <p>Your order for {{ order.item.name }} has been received.</p>
         <hr>
         <p class="mb-0">Order #{{ order.id }} will be ready in {{ order.item.preparation_time }} minutes.</p>
     </div>
-    <a href="{% url 'home' %}" class="btn btn-primary">Back to Menu</a>
+    
+    <a href="{% url 'home' %}" class="btn btn-primary" onclick="window.location.reload(true);">
+        Return to Home (Force Refresh)
+    </a>
 </div>
+
+<script>
+    // Force a hard refresh when returning to home page
+    if(window.performance && performance.navigation.type === 2) {
+        window.location.reload(true);
+    }
+</script>
 {% endblock %}

@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 {% load humanize %}
+{% load cache %}
 
 {% block content %}
+{% cache 30 home_page request.user.id %}
 <div class="container">
     <div class="row">
         <!-- Main Content -->
@@ -77,9 +79,9 @@
                     <h3 class="mb-0"><i class="bi bi-clock-history"></i> Your Recent Orders</h3>
                 </div>
                 
-                <div class="card-body">
+                <div class="card-body" id="orders-container">
                     {% if orders %}
-                    <div class="list-group">
+                    <div class="list-group" id="orders-list">
                         {% for order in orders %}
                         <div class="list-group-item">
                             <div class="d-flex justify-content-between">
@@ -88,15 +90,25 @@
                                     <small class="text-muted">
                                         Ordered {{ order.created_at|timesince }} ago
                                     </small>
+                                    <br>
+                                    <small>From: {{ order.item.stall.name }}</small>
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold">₹{{ order.item.price|intcomma }}</span>
                                     <br>
-                                    <span class="badge bg-{% if order.status == 'COMPLETED' %}success{% else %}warning{% endif %}">
+                                    <span class="badge bg-{% if order.status == 'COMPLETED' %}success{% elif order.status == 'CANCELLED' %}danger{% else %}warning{% endif %}">
                                         {{ order.get_status_display }}
                                     </span>
+                                    <br>
+                                    <small class="text-muted">Qty: {{ order.quantity }}</small>
                                 </div>
                             </div>
+                            {% if order.status == 'PREPARING' %}
+                            <div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 50%;"></div>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -104,16 +116,132 @@
                         View Full History
                     </a>
                     {% else %}
-                    <div class="alert alert-info">
+                    <div class="alert alert-info" id="no-orders-message">
                         <p class="mb-0">You haven't placed any orders yet.</p>
+                        {% if user.user_type == 'R' %}
+                        <a href="#stalls" class="btn btn-sm btn-primary mt-2">Place Your First Order</a>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
             </div>
             {% endif %}
-            
-            
         </div>
     </div>
 </div>
+{% endcache %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial load
+    refreshOrders();
+    
+    // Refresh every 5 seconds
+    const refreshInterval = setInterval(refreshOrders, 5000);
+    
+    // Refresh when page becomes visible
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            refreshOrders();
+        }
+    });
+    
+    // Main refresh function
+    function refreshOrders() {
+        fetch("{% url 'get_recent_orders' %}?_=" + new Date().getTime())
+            .then(response => {
+                if (!response.ok) throw new Error('Network error');
+                return response.json();
+            })
+            .then(data => {
+                if (data.orders && data.orders.length > 0) {
+                    updateOrdersList(data.orders);
+                } else {
+                    showNoOrders();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function updateOrdersList(orders) {
+        const container = document.getElementById('orders-container');
+        if (!container) return;
+        
+        // Remove no orders message if exists
+        const noOrdersMsg = document.getElementById('no-orders-message');
+        if (noOrdersMsg) noOrdersMsg.remove();
+        
+        // Create or update orders list
+        let ordersList = document.getElementById('orders-list');
+        if (!ordersList) {
+            ordersList = document.createElement('div');
+            ordersList.id = 'orders-list';
+            ordersList.className = 'list-group';
+            container.prepend(ordersList);
+        }
+        
+        // Update orders
+        ordersList.innerHTML = orders.map(order => `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="mb-1">${order.item_name}</h6>
+                        <small class="text-muted">
+                            Ordered ${order.time_ago} ago
+                        </small>
+                        <br>
+                        <small>From: ${order.stall_name}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="fw-bold">₹${order.price}</span>
+                        <br>
+                        <span class="badge bg-${order.status_class}">
+                            ${order.status_display}
+                        </span>
+                        <br>
+                        <small class="text-muted">Qty: ${order.quantity}</small>
+                    </div>
+                </div>
+                ${order.status === 'PREPARING' ? 
+                '<div class="progress mt-2" style="height: 5px;">' +
+                '<div class="progress-bar progress-bar-striped progress-bar-animated" ' +
+                'role="progressbar" style="width: 50%;"></div></div>' : ''}
+            </div>
+        `).join('');
+        
+        // Ensure view history button exists
+        if (!container.querySelector('.view-history-btn')) {
+            const viewBtn = document.createElement('a');
+            viewBtn.href = "{% url 'order_history' %}";
+            viewBtn.className = "btn btn-outline-primary mt-3 w-100 view-history-btn";
+            viewBtn.textContent = "View Full History";
+            container.appendChild(viewBtn);
+        }
+    }
+
+    function showNoOrders() {
+        const container = document.getElementById('orders-container');
+        if (!container || document.getElementById('no-orders-message')) return;
+        
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'no-orders-message';
+        alertDiv.className = 'alert alert-info';
+        alertDiv.innerHTML = `
+            <p class="mb-0">You haven't placed any orders yet.</p>
+            {% if user.user_type == 'R' %}
+            <a href="#stalls" class="btn btn-sm btn-primary mt-2">Place Your First Order</a>
+            {% endif %}
+        `;
+        container.appendChild(alertDiv);
+        
+        // Remove any existing orders list
+        const ordersList = document.getElementById('orders-list');
+        if (ordersList) ordersList.remove();
+        
+        // Remove view history button
+        const viewBtn = container.querySelector('.view-history-btn');
+        if (viewBtn) viewBtn.remove();
+    }
+});
+</script>
 {% endblock %}
